@@ -1,0 +1,5 @@
+# Vendor directories (зависимости Go)
+services/auth/vendor/
+services/tasks/vendor/
+# Vendor directories (зависимости Go)
+**/vendor/
