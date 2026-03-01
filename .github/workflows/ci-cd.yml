@@ -208,15 +208,15 @@ jobs:
           
             # Pull latest images
             echo "Pulling latest images..."
-            docker compose pull
+            docker-compose pull
           
             # Stop and remove old containers (if any)
             echo "Stopping old containers..."
-            docker compose down --remove-orphans || true
+            docker-compose down --remove-orphans || true
           
             # Start new containers
             echo "Starting new containers..."
-            docker compose up -d
+            docker-compose up -d
           
             # Clean up old images
             echo "Cleaning up old images..."
@@ -321,8 +321,8 @@ jobs:
             sed -i "s|TASKS_IMAGE=.*|TASKS_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/tasks:${{ github.sha }}|" .env
           
             # Pull and deploy
-            docker compose pull
-            docker compose up -d
+            docker-compose pull
+            docker-compose up -d
           EOF
 
 
