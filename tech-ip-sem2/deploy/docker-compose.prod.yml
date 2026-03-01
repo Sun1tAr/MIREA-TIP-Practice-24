@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mirea-tip-24-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "127.0.0.1:5433:5432"  # Локальный порт 5433, чтобы не конфликтовать
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - mirea-tip-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  auth:
+    image: ${AUTH_IMAGE:-ghcr.io/sun1tar/mirea-tip-practice-24/auth:latest}
+    container_name: mirea-tip-24-auth
+    environment:
+      AUTH_HTTP_PORT: 8081
+      AUTH_GRPC_PORT: 50051
+      LOG_LEVEL: info
+    ports:
+      - "127.0.0.1:8081:8081"    # Только локально
+      - "127.0.0.1:50051:50051"  # Только локально
+    restart: unless-stopped
+    networks:
+      - mirea-tip-network
+    healthcheck:
+      test: ["CMD", "grpc-health-check", "-addr=localhost:50051"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  tasks:
+    image: ${TASKS_IMAGE:-ghcr.io/sun1tar/mirea-tip-practice-24/tasks:latest}
+    container_name: mirea-tip-24-tasks
+    environment:
+      TASKS_PORT: 8082
+      AUTH_GRPC_ADDR: auth:50051
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_DRIVER: postgres
+      LOG_LEVEL: info
+    ports:
+      - "127.0.0.1:8092:8082"  # Только локально, через nginx
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - mirea-tip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/v1/tasks"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+networks:
+  mirea-tip-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
