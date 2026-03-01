@@ -8,7 +8,6 @@ on:
 
 env:
   GO_VERSION: '1.22'
-  # Теги для Docker образов
   AUTH_IMAGE_TAG: ghcr.io/${{ github.repository }}/auth:${{ github.sha }}
   TASKS_IMAGE_TAG: ghcr.io/${{ github.repository }}/tasks:${{ github.sha }}
 
@@ -29,21 +28,17 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Download dependencies (Auth)
-        working-directory: ./tech-ip-sem2/services/auth
-        run: go mod download
-
-      - name: Download dependencies (Tasks)
-        working-directory: ./tech-ip-sem2/services/tasks
-        run: go mod download
-
       - name: Create vendor for Auth
         working-directory: ./tech-ip-sem2/services/auth
-        run: go mod vendor
+        run: |
+          go mod download
+          go mod vendor
 
       - name: Create vendor for Tasks
         working-directory: ./tech-ip-sem2/services/tasks
-        run: go mod vendor
+        run: |
+          go mod download
+          go mod vendor
 
       - name: Run tests (Auth service)
         working-directory: ./tech-ip-sem2/services/auth
@@ -87,13 +82,17 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Create vendor for Auth (for Docker context)
+      - name: Create vendor for Auth (for Docker)
         working-directory: ./tech-ip-sem2/services/auth
-        run: go mod vendor
+        run: |
+          go mod download
+          go mod vendor
 
-      - name: Create vendor for Tasks (for Docker context)
+      - name: Create vendor for Tasks (for Docker)
         working-directory: ./tech-ip-sem2/services/tasks
-        run: go mod vendor
+        run: |
+          go mod download
+          go mod vendor
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -135,7 +134,6 @@ jobs:
       - name: List Docker images
         run: docker images | grep -E "(auth|tasks)-service"
 
-  # Заглушка для деплоя
   deploy-staging:
     name: Deploy to Staging (Placeholder)
     runs-on: ubuntu-latest
@@ -143,44 +141,15 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Simulate deployment
         run: |
           echo "🔧 STAGING DEPLOYMENT PLACEHOLDER"
-          echo "This job would deploy the following images:"
-          echo "  Auth: ${{ env.AUTH_IMAGE_TAG }}"
-          echo "  Tasks: ${{ env.TASKS_IMAGE_TAG }}"
+          echo "Images ready:"
+          echo "  Auth: auth-service:${{ github.sha }}"
+          echo "  Tasks: tasks-service:${{ github.sha }}"
           echo ""
-          echo "To enable actual deployment:"
-          echo "1. Add SSH secrets to repository:"
-          echo "   - DEPLOY_HOST (server IP)"
-          echo "   - DEPLOY_USER (ssh username)"
-          echo "   - DEPLOY_SSH_KEY (private ssh key)"
-          echo "2. Configure server with Docker and nginx"
-          echo ""
-          echo "Job completed successfully (placeholder)"
+          echo "To enable actual deployment, configure SSH secrets."
 
-  # Заглушка для реконфигурации nginx
-  reconfigure-nginx:
-    name: Reconfigure Nginx (Placeholder)
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: false  # Отключено до настройки
-
-    steps:
-      - name: Simulate nginx reconfiguration
-        run: |
-          echo "🔄 NGINX RECONFIGURATION PLACEHOLDER"
-          echo "This job would:"
-          echo "1. Copy nginx.conf to server"
-          echo "2. Test configuration"
-          echo "3. Reload nginx"
-          echo ""
-          echo "Job is disabled (if: false)"
-
-  # Заглушка для production деплоя
   deploy-production:
     name: Deploy to Production (Placeholder)
     runs-on: ubuntu-latest
@@ -188,15 +157,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Simulate production deployment
         run: |
           echo "🚀 PRODUCTION DEPLOYMENT PLACEHOLDER"
-          echo "This would deploy tagged version: ${{ github.ref_name }}"
+          echo "Version: ${{ github.ref_name }}"
           echo "Images:"
-          echo "  Auth: ${{ env.AUTH_IMAGE_TAG }}"
-          echo "  Tasks: ${{ env.TASKS_IMAGE_TAG }}"
-          echo ""
-          echo "Job completed successfully (placeholder)"
+          echo "  Auth: auth-service:${{ github.sha }}"
+          echo "  Tasks: tasks-service:${{ github.sha }}"

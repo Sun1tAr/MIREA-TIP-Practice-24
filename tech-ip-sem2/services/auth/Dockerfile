@@ -12,18 +12,8 @@ WORKDIR /app
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
-# Copy local dependencies (proto and shared)
-# Создаём структуру папок для replace
-RUN mkdir -p /proto /shared
-
-# Копируем proto модуль (из контекста сборки)
-COPY ../proto /proto
-
-# Копируем shared модуль (из контекста сборки)
-COPY ../shared /shared
-
-# Download dependencies and create vendor
-RUN go mod download && go mod vendor
+# Copy vendor directory (created in CI)
+COPY vendor ./vendor
 
 # Copy source code
 COPY . .
