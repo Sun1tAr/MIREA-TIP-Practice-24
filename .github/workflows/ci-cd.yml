@@ -79,9 +79,11 @@ jobs:
       - name: Set lowercase variables
         id: string
         run: |
+          # Приводим к нижнему регистру
           echo "lowercase_owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-          echo "lowercase_repo=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
-          echo "lowercase_repo_name=${GITHUB_REPOSITORY_NAME,,}" >> $GITHUB_OUTPUT
+          # Используем имя репозитория из GITHUB_REPOSITORY (удаляем владельца)
+          REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          echo "lowercase_repo=${REPO_NAME,,}" >> $GITHUB_OUTPUT
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -120,8 +122,8 @@ jobs:
           file: ./tech-ip-sem2/services/auth/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/auth:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/auth:latest
+            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/auth:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/auth:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -132,8 +134,8 @@ jobs:
           file: ./tech-ip-sem2/services/tasks/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/tasks:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/tasks:latest
+            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/tasks:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/tasks:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -148,7 +150,8 @@ jobs:
         id: string
         run: |
           echo "lowercase_owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-          echo "lowercase_repo_name=${GITHUB_REPOSITORY_NAME,,}" >> $GITHUB_OUTPUT
+          REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          echo "lowercase_repo=${REPO_NAME,,}" >> $GITHUB_OUTPUT
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -180,8 +183,8 @@ jobs:
           DB_USER=tasks_user
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_NAME=tasks_db
-          AUTH_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/auth:${{ github.sha }}
-          TASKS_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/tasks:${{ github.sha }}
+          AUTH_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/auth:${{ github.sha }}
+          TASKS_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/tasks:${{ github.sha }}
           EOF"
 
       - name: Deploy on server
@@ -273,7 +276,8 @@ jobs:
         id: string
         run: |
           echo "lowercase_owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-          echo "lowercase_repo_name=${GITHUB_REPOSITORY_NAME,,}" >> $GITHUB_OUTPUT
+          REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          echo "lowercase_repo=${REPO_NAME,,}" >> $GITHUB_OUTPUT
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -297,8 +301,8 @@ jobs:
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
           
             # Update .env with tagged versions
-            sed -i "s|AUTH_IMAGE=.*|AUTH_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/auth:${{ github.sha }}|" .env
-            sed -i "s|TASKS_IMAGE=.*|TASKS_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo_name }}/tasks:${{ github.sha }}|" .env
+            sed -i "s|AUTH_IMAGE=.*|AUTH_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/auth:${{ github.sha }}|" .env
+            sed -i "s|TASKS_IMAGE=.*|TASKS_IMAGE=${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase_owner }}/${{ steps.string.outputs.lowercase_repo }}/tasks:${{ github.sha }}|" .env
           
             # Pull and deploy
             docker compose pull
