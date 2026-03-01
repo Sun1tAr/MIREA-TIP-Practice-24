@@ -12,8 +12,8 @@ WORKDIR /app
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
-# Copy vendor directory
-COPY vendor ./vendor
+# Download dependencies and create vendor
+RUN go mod download && go mod vendor
 
 # Copy source code
 COPY . .
