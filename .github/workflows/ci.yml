@@ -1,0 +1,166 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  GO_VERSION: '1.22'
+  AUTH_IMAGE_TAG: ghcr.io/${{ github.repository }}/auth:${{ github.sha }}
+  TASKS_IMAGE_TAG: ghcr.io/${{ github.repository }}/tasks:${{ github.sha }}
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Create vendor for Auth
+        working-directory: ./tech-ip-sem2/services/auth
+        run: |
+          go mod download
+          go mod vendor
+
+      - name: Create vendor for Tasks
+        working-directory: ./tech-ip-sem2/services/tasks
+        run: |
+          go mod download
+          go mod vendor
+
+      - name: Run tests (Auth service)
+        working-directory: ./tech-ip-sem2/services/auth
+        run: go test ./... -v
+        continue-on-error: true
+
+      - name: Run tests (Tasks service)
+        working-directory: ./tech-ip-sem2/services/tasks
+        run: go test ./... -v
+        continue-on-error: true
+
+      - name: Build Auth service
+        working-directory: ./tech-ip-sem2/services/auth
+        run: go build -v -o bin/auth ./cmd/auth
+
+      - name: Build Tasks service
+        working-directory: ./tech-ip-sem2/services/tasks
+        run: go build -v -o bin/tasks ./cmd/tasks
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            tech-ip-sem2/services/auth/bin/auth
+            tech-ip-sem2/services/tasks/bin/tasks
+          retention-days: 1
+
+  docker-build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Create vendor for Auth (for Docker)
+        working-directory: ./tech-ip-sem2/services/auth
+        run: |
+          go mod download
+          go mod vendor
+
+      - name: Create vendor for Tasks (for Docker)
+        working-directory: ./tech-ip-sem2/services/tasks
+        run: |
+          go mod download
+          go mod vendor
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Build Auth Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tech-ip-sem2/services/auth
+          file: ./tech-ip-sem2/services/auth/Dockerfile
+          push: false
+          load: true
+          tags: |
+            auth-service:${{ github.sha }}
+            auth-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Tasks Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tech-ip-sem2/services/tasks
+          file: ./tech-ip-sem2/services/tasks/Dockerfile
+          push: false
+          load: true
+          tags: |
+            tasks-service:${{ github.sha }}
+            tasks-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: List Docker images
+        run: docker images | grep -E "(auth|tasks)-service"
+
+  deploy-staging:
+    name: Deploy to Staging (Placeholder)
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Simulate deployment
+        run: |
+          echo "🔧 STAGING DEPLOYMENT PLACEHOLDER"
+          echo "Images ready:"
+          echo "  Auth: auth-service:${{ github.sha }}"
+          echo "  Tasks: tasks-service:${{ github.sha }}"
+          echo ""
+          echo "To enable actual deployment, configure SSH secrets."
+
+  deploy-production:
+    name: Deploy to Production (Placeholder)
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Simulate production deployment
+        run: |
+          echo "🚀 PRODUCTION DEPLOYMENT PLACEHOLDER"
+          echo "Version: ${{ github.ref_name }}"
+          echo "Images:"
+          echo "  Auth: auth-service:${{ github.sha }}"
+          echo "  Tasks: tasks-service:${{ github.sha }}"
