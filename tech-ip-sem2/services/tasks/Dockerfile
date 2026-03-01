@@ -17,10 +17,10 @@ COPY go.mod go.sum ./
 RUN mkdir -p /proto /shared
 
 # Копируем proto модуль (из контекста сборки)
-COPY ../../proto /proto
+COPY ../proto /proto
 
 # Копируем shared модуль (из контекста сборки)
-COPY ../../shared /shared
+COPY ../shared /shared
 
 # Download dependencies and create vendor
 RUN go mod download && go mod vendor
